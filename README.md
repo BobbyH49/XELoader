@@ -10,20 +10,20 @@
 * There is very little error handling at the moment but can easily be included
 * This project is to show what you can do as an alternative to using RML Utilities by Microsoft, and can easily be extended
 
-**XELoader** parameters
+###XELoader parameters
 
-	* SqlInstanceName - Your default or named SQL Instance (e.g. MyServer\MyInstance)
-	* DatabaseName - Any existing database on your instance
-	* Authentication - Windows or SQL (default is Windows)
-	* TrustCertificate - True or False (default is True)
-	* Username - Only required for SQL Authentication
-	* Password - Only required for SQL Authentication
-	* SchemaName - Can be new or existing
-	* TableSuffix - Will be appended to the new tables (tblBatches, tblUniqueBatches, tblBatchDurationSummary)
-	* XEFolder - Directory where xel files are located
-	* XEFilePattern - Default is *.xel
-	* StartTime - Filters the timestamp with a default of 01/01/1900 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
-	* EndTime  - Filters the timestamp with a default of 31/12/9999 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
-	* TimeZoneOffset - Timezone to use if filtering on StartTime and EndTime (format is +/-hh:mm)
-	* BatchSize - Throttle the BatchSize but can cause timeouts (try starting with a size that allows for around 20-25 batches per file)
-	* ParallelThreads - 1 or many threads but can cause CPU or Memory issues (try starting with 4)
+* SqlInstanceName - Your default or named SQL Instance (e.g. MyServer\MyInstance)
+* DatabaseName - Any existing database on your instance
+* Authentication - Windows or SQL (default is Windows)
+* TrustCertificate - True or False (default is True)
+* Username - Only required for SQL Authentication
+* Password - Only required for SQL Authentication
+* SchemaName - Can be new or existing
+* TableSuffix - Will be appended to the new tables (tblBatches, tblUniqueBatches, tblBatchDurationSummary)
+* XEFolder - Directory where xel files are located
+* XEFilePattern - Default is *.xel
+* StartTime - Filters the timestamp with a default of 01/01/1900 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
+* EndTime  - Filters the timestamp with a default of 31/12/9999 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
+* TimeZoneOffset - Timezone to use if filtering on StartTime and EndTime (format is +/-hh:mm)
+* BatchSize - Throttle the BatchSize but can cause timeouts (try starting with a size that allows for around 20-25 batches per file)
+* ParallelThreads - 1 or many threads but can cause CPU or Memory issues (try starting with 4)
