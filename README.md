@@ -10,7 +10,7 @@
 * There is very little error handling at the moment but can easily be included
 * This project is to show what you can do as an alternative to using RML Utilities by Microsoft, and can easily be extended
 
-###XELoader parameters
+### XELoader parameters
 
 * SqlInstanceName - Your default or named SQL Instance (e.g. MyServer\MyInstance)
 * DatabaseName - Any existing database on your instance
