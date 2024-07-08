@@ -8,7 +8,7 @@
 * Currently only processes rpc_completed and sql_batch_completed events but can be extended
 * Statistics are currently only based on Duration but this can be extended to do all other metrics in the same way
 * There is very little error handling at the moment but can easily be included
-* This project is to show what you can do as an alternative to using RML Utilities by Microsoft, and can easily be extended
+* This project is to show what you can do as an alternative to using ReadTrace as part of the RML Utilities by Microsoft, and it can easily be extended
 
 ### XELoader parameters
 
