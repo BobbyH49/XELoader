@@ -12,6 +12,7 @@
 
         public XEFile(Int32 fileNumber, FileInfo file, XEReader xer)
         {
+            // Information required for each thread when processing the files
             this.fileNumber = fileNumber;
             this.file = file;
             this.startTimeOffset = xer.StartTimeOffset;

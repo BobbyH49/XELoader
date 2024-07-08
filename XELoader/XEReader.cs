@@ -26,6 +26,7 @@ namespace XELoader
 
         public XEReader(Dictionary<string, string> paramList)
         {
+            // Initialize the XEReader object with all of the parameters
             this.sqlInstanceName = paramList["SqlInstanceName"];
 
             this.databaseName = paramList["DatabaseName"];
@@ -87,6 +88,7 @@ namespace XELoader
         {
             Int16 result;
 
+            // Execute a simple SQL Query and then return a success or failed message
             using (SqlConnection sqlConnection = GetConnection(sqlConnectionStr))
             {
                 result = ExecuteSqlQuery(sqlConnection, sqlCommand, commandTimeout);
@@ -108,6 +110,7 @@ namespace XELoader
         {
             Int16 result;
 
+            // Get the list of files and then store in a queue to be dequeued by each thread
             FileInfo[] eventFiles = new DirectoryInfo(xer.XEFolder).GetFiles(xer.XEFilePattern);
             Int32 eventFilesLength = eventFiles.Length;
             FileInfo eventFile;
@@ -117,6 +120,7 @@ namespace XELoader
 
             Console.WriteLine($"\r\n{eventFilesLength} files to process!");
 
+            // Enqueue each file to the queue
             for (Int32 i = 0; i < eventFilesLength; i++)
             {
                 eventFile = eventFiles[i];
@@ -127,12 +131,14 @@ namespace XELoader
 
             Thread[] threads = new Thread[xer.ParallelThreads];
 
+            // Create threads based on the ParallelThreads parameter and then start each with a pointer to the queue
             for (int i = 0; i < xer.ParallelThreads; i++)
             {
                 threads[i] = new Thread(ProcessEventFiles);
                 threads[i].Start(xeFileQueue);
             }
 
+            // Join each thread to wait for completion
             for (int i = 0; i < ParallelThreads; i++)
             {
                 threads[i].Join();
@@ -156,6 +162,7 @@ namespace XELoader
                 string object_name;
                 string batch_text;
 
+                // Create a DataTable to store the data that will be uploaded to the database
                 DataTable dt = new DataTable();
                 DataColumn eventSequence = new DataColumn("EventSequence", typeof(Int64));
                 dt.Columns.Add(eventSequence);
@@ -200,15 +207,18 @@ namespace XELoader
                 DataRow row;
                 XEFile? xeFile;
 
+                // While there are files remaining in the queue
                 while (xeFileQueue.Count > 0)
                 {
                     xeFile = null;
 
+                    // Lock the queue to block other threads while dequeuing the file
                     lock (xeFileQueue)
                     {
                         xeFileQueue.TryDequeue(out xeFile);
                     }
 
+                    // If the thread has retrieved a file then process
                     if (xeFile != null)
                     {
                         Console.WriteLine($"\r\nProcessing file {xeFile.FileNumber.ToString()} - {xeFile.File.Name}!");
@@ -217,22 +227,29 @@ namespace XELoader
                         eventsProcessed = 0;
                         batchCount = 0;
 
+                        // Open the xel file for reading
                         using (var events = new QueryableXEventData(xeFile.File.FullName))
                         {
+                            // Open a new SQL Connection
                             using (SqlConnection sqlConnection = GetConnection(xeFile.SqlConnectionStr))
                             {
+                                // Setup the connection to the batches table
                                 sqlConnection.Open();
                                 SqlBulkCopy bcp = new SqlBulkCopy(sqlConnection);
                                 bcp.DestinationTableName = $"{xeFile.FullBatchesTableName}";
 
+                                // Process each event one by one
                                 foreach (var xe in events)
                                 {
                                     eventsRead++;
 
+                                    // Only process rpc_completed and sql_batch_completed events
                                     if ((xe.Name == "rpc_completed") || (xe.Name == "sql_batch_completed"))
                                     {
+                                        // Only process events that have a Timestamp that fall within the StartTime and EndTime boundaries
                                         if ((xe.Timestamp >= xeFile.StartTimeOffset) && (xe.Timestamp <= xeFile.EndTimeOffset))
                                         {
+                                            // Create a new row in the DataTable and populate
                                             row = dt.NewRow();
                                             dt.Rows.Add(row);
                                             row["EventSequence"] = xe.Actions["event_sequence"].Value;
@@ -242,6 +259,7 @@ namespace XELoader
                                             row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
                                             row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
                                             row["HashId"] = 0;
+                                            // HashId, NormText and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
                                             if (xe.Name == "rpc_completed")
                                             {
                                                 statement = xe.Fields["statement"].Value.ToString() ?? "";
@@ -275,6 +293,7 @@ namespace XELoader
 
                                             eventsProcessed++;
 
+                                            // Flush the DataTable to the database in batches based on BatchSize parameter
                                             if ((eventsProcessed != 0) && (eventsProcessed % xeFile.BatchSize == 0))
                                             {
                                                 bcp.WriteToServer(dt);
@@ -284,6 +303,7 @@ namespace XELoader
                                         }
                                     }
                                 }
+                                // Flush the final DataTable to the database if not empty
                                 if (eventsProcessed != 0)
                                 {
                                     bcp.WriteToServer(dt); // write last batch
@@ -304,6 +324,8 @@ namespace XELoader
 
         private static string GetNormText(string origText)
         {
+            // Parses the TextData column and normalizes by removing literals and whitespace
+            // This version is set to SQL Server 2022
             var parser = new TSql160Parser(false);
             IList<ParseError> errors;
 
@@ -320,34 +342,46 @@ namespace XELoader
 
                 foreach (var batch in script.ScriptTokenStream)
                 {
+                    // If dynamic sql is being used and the token is text
                     if ((isDynamic == true) && ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral")))
                     {
+                        // Keep the text and then set the dynamic flag to false
                         parsedText += batch.Text;
                         isDynamic = false;
                     }
+                    // If dynamic sql is not being used and the token is text
                     else if ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral"))
                     {
+                        // Replace text with static value
                         parsedText += "{STR}";
 
                     }
+                    // If the token is an integer
                     else if (batch.TokenType.ToString().StartsWith("Integer"))
                     {
+                        // Replace with a static value
                         parsedText += "{##}";
                     }
+                    // If the token is a comment
                     else if ((batch.TokenType.ToString() == "SingleLineComment") || (batch.TokenType.ToString() == "MultilineComment"))
                     {
+                        // Do nothing
                         parsedText += "";
                     }
+                    // If the current statement starts with sp_executesql or sp_prepare
                     else if (((batch.Text ?? "").StartsWith("sp_executesql")) || ((batch.Text ?? "") == "sp_prepare"))
                     {
+                        // Set the dynamic flag to true and keep the text
                         isDynamic = true;
                         parsedText += batch.Text;
                     }
                     else
                     {
+                        // For anything else keep the text
                         parsedText += batch.Text;
                     }
                 }
+                // Replace any remaining whitespace
                 normText = Regex.Replace(parsedText, pattern, replacement).Trim();
             }
             return normText;
@@ -355,6 +389,7 @@ namespace XELoader
 
         private static SqlConnection GetConnection(string sqlConnectionStr)
         {
+            // Setup the connection
             return new SqlConnection(sqlConnectionStr);
         }
 
@@ -362,6 +397,7 @@ namespace XELoader
         {
             Int16 result = 0;
 
+            // Try to execute a simple SQL Query or display the error message
             try
             {
                 sqlConnection.Open();
