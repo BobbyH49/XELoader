@@ -95,11 +95,11 @@ namespace XELoader
 
                 if (result == 0)
                 {
-                    Console.WriteLine(successMessage);
+                    Console.WriteLine($"{successMessage} - {DateTimeOffset.Now}");
                 }
                 else
                 {
-                    Console.WriteLine(failedMessage);
+                    Console.WriteLine($"{failedMessage} - {DateTimeOffset.Now}");
                 }
             }
 
@@ -188,9 +188,12 @@ namespace XELoader
                 DataColumn normText = new DataColumn("NormText", typeof(string));
                 normText.MaxLength = -1;
                 dt.Columns.Add(normText);
-                DataColumn result = new DataColumn("Result", typeof(string));
-                result.MaxLength = 10;
-                dt.Columns.Add(result);
+                DataColumn successful = new DataColumn("Successful", typeof(UInt16));
+                dt.Columns.Add(successful);
+                DataColumn failed = new DataColumn("Failed", typeof(UInt16));
+                dt.Columns.Add(failed);
+                DataColumn aborted = new DataColumn("Aborted", typeof(UInt16));
+                dt.Columns.Add(aborted);
                 DataColumn duration = new DataColumn("Duration", typeof(UInt64));
                 dt.Columns.Add(duration);
                 DataColumn cpuTime = new DataColumn("CpuTime", typeof(UInt64));
@@ -221,7 +224,7 @@ namespace XELoader
                     // If the thread has retrieved a file then process
                     if (xeFile != null)
                     {
-                        Console.WriteLine($"\r\nProcessing file {xeFile.FileNumber.ToString()} - {xeFile.File.Name}!");
+                        Console.WriteLine($"\r\nProcessing file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
 
                         eventsRead = 0;
                         eventsProcessed = 0;
@@ -283,7 +286,35 @@ namespace XELoader
                                                 row["TextData"] = batch_text;
                                                 row["NormText"] = GetNormText(batch_text);
                                             }
-                                            row["Result"] = xe.Fields["result"].Value.ToString();
+
+                                            if (xe.Fields["result"].Value.ToString() == "OK")
+                                            {
+                                                row["Successful"] = 1;
+                                                row["Failed"] = 0;
+                                                row["Aborted"] = 0;
+
+                                            }
+                                            else if (xe.Fields["result"].Value.ToString() == "Error")
+                                            {
+                                                row["Successful"] = 0;
+                                                row["Failed"] = 1;
+                                                row["Aborted"] = 0;
+
+                                            }
+                                            else if (xe.Fields["result"].Value.ToString() == "Abort")
+                                            {
+                                                row["Successful"] = 0;
+                                                row["Failed"] = 0;
+                                                row["Aborted"] = 1;
+
+                                            }
+                                            else
+                                            {
+                                                row["Successful"] = 0;
+                                                row["Failed"] = 0;
+                                                row["Aborted"] = 0;
+
+                                            }
                                             row["Duration"] = xe.Fields["duration"].Value;
                                             row["CpuTime"] = xe.Fields["cpu_time"].Value;
                                             row["LogicalReads"] = xe.Fields["logical_reads"].Value;
@@ -313,7 +344,7 @@ namespace XELoader
                             }
                         }
 
-                        Console.WriteLine($"\r\nProcessed file {xeFile.FileNumber.ToString()} - {xeFile.File.Name}!");
+                        Console.WriteLine($"\r\nProcessed file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
                         Console.WriteLine($"\tEvents read = {eventsRead.ToString()}");
                         Console.WriteLine($"\tEvents processed = {eventsProcessed.ToString()}");
                         Console.WriteLine($"\tBatches processed = {batchCount.ToString()}");
