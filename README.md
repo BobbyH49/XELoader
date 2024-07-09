@@ -3,10 +3,9 @@
 ### Load Extended Events into a SQL Server Database and aggregate over a number of metrics
 
 * This is a current WIP which can load multiple xel files into a SQL Server Database by throttling Batch Size and Parallel Threads
-* Once the tblBatches table is loaded it will generate a tblUniqueBatches and a tblBatchDurationSummary table which gives full statistics about the duration of each unique batch
+* Once the tblBatches table is loaded it will generate a tblUniqueBatches and several summary tables to provide full stats on all SQL Server batch metrics
 * It uses the SQL Server 2022 TSQLParser but is backward compatible with other SQL Server versions
 * Currently only processes rpc_completed and sql_batch_completed events but can be extended
-* Statistics are currently only based on Duration but this can be extended to do all other metrics in the same way
 * There is very little error handling at the moment but can easily be included
 * This project is to show what you can do as an alternative to using ReadTrace as part of the RML Utilities by Microsoft, and it can easily be extended
 

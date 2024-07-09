@@ -180,11 +180,13 @@ namespace XELoader
                 DataColumn databaseName = new DataColumn("DatabaseName", typeof(string));
                 databaseName.MaxLength = 200;
                 dt.Columns.Add(databaseName);
-                DataColumn hashId = new DataColumn("HashId", typeof(Int32));
-                dt.Columns.Add(hashId);
+                DataColumn textDataHashId = new DataColumn("TextDataHashId", typeof(Int32));
+                dt.Columns.Add(textDataHashId);
                 DataColumn textData = new DataColumn("TextData", typeof(string));
                 textData.MaxLength = -1;
                 dt.Columns.Add(textData);
+                DataColumn normTextHashId = new DataColumn("NormTextHashId", typeof(Int32));
+                dt.Columns.Add(normTextHashId);
                 DataColumn normText = new DataColumn("NormText", typeof(string));
                 normText.MaxLength = -1;
                 dt.Columns.Add(normText);
@@ -261,29 +263,31 @@ namespace XELoader
                                             row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
                                             row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
                                             row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
-                                            row["HashId"] = 0;
-                                            // HashId, NormText and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
+                                            row["NormTextHashId"] = 0;
+                                            // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
                                             if (xe.Name == "rpc_completed")
                                             {
                                                 statement = xe.Fields["statement"].Value.ToString() ?? "";
                                                 object_name = xe.Fields["object_name"].Value.ToString() ?? "";
+                                                row["TextDataHashId"] = statement.GetHashCode();
                                                 row["TextData"] = statement;
                                                 if ((!object_name.StartsWith("sp_execute")) && (object_name != "sp_prepare"))
                                                 {
-                                                    row["HashId"] = object_name.GetHashCode();
+                                                    row["NormTextHashId"] = object_name.GetHashCode();
                                                     row["NormText"] = object_name;
                                                 }
                                                 else
                                                 {
-                                                    row["HashId"] = GetNormText(statement).GetHashCode();
+                                                    row["NormTextHashId"] = GetNormText(statement).GetHashCode();
                                                     row["NormText"] = GetNormText(statement);
                                                 }
                                             }
                                             else
                                             {
                                                 batch_text = xe.Fields["batch_text"].Value.ToString() ?? "";
-                                                row["HashId"] = GetNormText(batch_text).GetHashCode();
+                                                row["TextDataHashId"] = batch_text.GetHashCode();
                                                 row["TextData"] = batch_text;
+                                                row["NormTextHashId"] = GetNormText(batch_text).GetHashCode();
                                                 row["NormText"] = GetNormText(batch_text);
                                             }
 
@@ -543,6 +547,22 @@ namespace XELoader
                 return fullUniqueBatchesTableName;
             }
         }
+        public string BatchSummaryTableName
+        {
+            get
+            {
+                string batchSummaryTableName = $"tblBatchSummary{tableSuffix}";
+                return batchSummaryTableName;
+            }
+        }
+        public string FullBatchSummaryTableName
+        {
+            get
+            {
+                string FullBatchSummaryTableName = $"{schemaName}.{BatchSummaryTableName}";
+                return FullBatchSummaryTableName;
+            }
+        }
         public string BatchDurationSummaryTableName
         {
             get
@@ -557,6 +577,86 @@ namespace XELoader
             {
                 string FullBatchDurationSummaryTableName = $"{schemaName}.{BatchDurationSummaryTableName}";
                 return FullBatchDurationSummaryTableName;
+            }
+        }
+        public string BatchCpuTimeSummaryTableName
+        {
+            get
+            {
+                string batchCpuTimeSummaryTableName = $"tblBatchCpuTimeSummary{tableSuffix}";
+                return batchCpuTimeSummaryTableName;
+            }
+        }
+        public string FullBatchCpuTimeSummaryTableName
+        {
+            get
+            {
+                string FullBatchCpuTimeSummaryTableName = $"{schemaName}.{BatchCpuTimeSummaryTableName}";
+                return FullBatchCpuTimeSummaryTableName;
+            }
+        }
+        public string BatchLogicalReadsSummaryTableName
+        {
+            get
+            {
+                string batchLogicalReadsSummaryTableName = $"tblBatchLogicalReadsSummary{tableSuffix}";
+                return batchLogicalReadsSummaryTableName;
+            }
+        }
+        public string FullBatchLogicalReadsSummaryTableName
+        {
+            get
+            {
+                string FullBatchLogicalReadsSummaryTableName = $"{schemaName}.{BatchLogicalReadsSummaryTableName}";
+                return FullBatchLogicalReadsSummaryTableName;
+            }
+        }
+        public string BatchPhysicalReadsSummaryTableName
+        {
+            get
+            {
+                string batchPhysicalReadsSummaryTableName = $"tblBatchPhysicalReadsSummary{tableSuffix}";
+                return batchPhysicalReadsSummaryTableName;
+            }
+        }
+        public string FullBatchPhysicalReadsSummaryTableName
+        {
+            get
+            {
+                string FullBatchPhysicalReadsSummaryTableName = $"{schemaName}.{BatchPhysicalReadsSummaryTableName}";
+                return FullBatchPhysicalReadsSummaryTableName;
+            }
+        }
+        public string BatchWritesSummaryTableName
+        {
+            get
+            {
+                string batchWritesSummaryTableName = $"tblBatchWritesSummary{tableSuffix}";
+                return batchWritesSummaryTableName;
+            }
+        }
+        public string FullBatchWritesSummaryTableName
+        {
+            get
+            {
+                string FullBatchWritesSummaryTableName = $"{schemaName}.{BatchWritesSummaryTableName}";
+                return FullBatchWritesSummaryTableName;
+            }
+        }
+        public string BatchRowcountSummaryTableName
+        {
+            get
+            {
+                string batchRowcountSummaryTableName = $"tblBatchRowcountSummary{tableSuffix}";
+                return batchRowcountSummaryTableName;
+            }
+        }
+        public string FullBatchRowcountSummaryTableName
+        {
+            get
+            {
+                string FullBatchRowcountSummaryTableName = $"{schemaName}.{BatchRowcountSummaryTableName}";
+                return FullBatchRowcountSummaryTableName;
             }
         }
         public string XEFolder
