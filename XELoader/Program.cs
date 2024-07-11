@@ -95,7 +95,7 @@
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Load the Summary table
-            sqlCommand = $"INSERT INTO {xer.FullBatchSummaryTableName} (NormTextHashId, AllExecutions, DistinctExecutions, SuccessfulExecutions, FailedExecutions, AbortedExecutions)\r\nSELECT\r\n\tNormTextHashId\r\n\t, AllExecutions = COUNT(*)\r\n\t, DistinctExecutions = COUNT(DISTINCT TextDataHashId)\r\n\t, SuccessfulExecutions = SUM(Successful)\r\n\t, FailedExecutions = SUM(Failed)\r\n\t, AbortedExecutions = SUM(Aborted)\r\nFROM XELoader.tblBatches20240522\r\nGROUP BY\r\n\tNormTextHashId;";
+            sqlCommand = $"INSERT INTO {xer.FullBatchSummaryTableName} (NormTextHashId, AllExecutions, DistinctExecutions, SuccessfulExecutions, FailedExecutions, AbortedExecutions)\r\nSELECT\r\n\tNormTextHashId\r\n\t, AllExecutions = COUNT(*)\r\n\t, DistinctExecutions = COUNT(DISTINCT TextDataHashId)\r\n\t, SuccessfulExecutions = SUM(Successful)\r\n\t, FailedExecutions = SUM(Failed)\r\n\t, AbortedExecutions = SUM(Aborted)\r\nFROM {xer.FullBatchesTableName}\r\nGROUP BY\r\n\tNormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchSummaryTableName}!";
             commandTimeout = 600;
