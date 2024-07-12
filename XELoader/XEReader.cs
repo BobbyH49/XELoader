@@ -254,86 +254,94 @@ namespace XELoader
                                         // Only process events that have a Timestamp that fall within the StartTime and EndTime boundaries
                                         if ((xe.Timestamp >= xeFile.StartTimeOffset) && (xe.Timestamp <= xeFile.EndTimeOffset))
                                         {
-                                            // Create a new row in the DataTable and populate
-                                            row = dt.NewRow();
-                                            dt.Rows.Add(row);
-                                            row["EventSequence"] = xe.Actions["event_sequence"].Value;
-                                            row["EventType"] = xe.Name;
-                                            row["Timestamp"] = xe.Timestamp;
-                                            row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
-                                            row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
-                                            row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
-                                            row["NormTextHashId"] = 0;
-                                            // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
-                                            if (xe.Name == "rpc_completed")
+                                            try
                                             {
-                                                statement = xe.Fields["statement"].Value.ToString() ?? "";
-                                                object_name = xe.Fields["object_name"].Value.ToString() ?? "";
-                                                row["TextDataHashId"] = statement.GetHashCode();
-                                                row["TextData"] = statement;
-                                                if ((!object_name.StartsWith("sp_execute")) && (object_name != "sp_prepare"))
+
+                                                // Create a new row in the DataTable and populate
+                                                row = dt.NewRow();
+                                                dt.Rows.Add(row);
+                                                row["EventSequence"] = xe.Actions["event_sequence"].Value;
+                                                row["EventType"] = xe.Name;
+                                                row["Timestamp"] = xe.Timestamp;
+                                                row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
+                                                row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
+                                                row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
+                                                row["NormTextHashId"] = 0;
+                                                // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
+                                                if (xe.Name == "rpc_completed")
                                                 {
-                                                    row["NormTextHashId"] = object_name.GetHashCode();
-                                                    row["NormText"] = object_name;
+                                                    statement = xe.Fields["statement"].Value.ToString() ?? "";
+                                                    object_name = xe.Fields["object_name"].Value.ToString() ?? "";
+                                                    row["TextDataHashId"] = statement.GetHashCode();
+                                                    row["TextData"] = statement;
+                                                    if ((!object_name.StartsWith("sp_execute")) && (object_name != "sp_prepare"))
+                                                    {
+                                                        row["NormTextHashId"] = object_name.GetHashCode();
+                                                        row["NormText"] = object_name;
+                                                    }
+                                                    else
+                                                    {
+                                                        row["NormTextHashId"] = GetNormText(statement).GetHashCode();
+                                                        row["NormText"] = GetNormText(statement);
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    row["NormTextHashId"] = GetNormText(statement).GetHashCode();
-                                                    row["NormText"] = GetNormText(statement);
+                                                    batch_text = xe.Fields["batch_text"].Value.ToString() ?? "";
+                                                    row["TextDataHashId"] = batch_text.GetHashCode();
+                                                    row["TextData"] = batch_text;
+                                                    row["NormTextHashId"] = GetNormText(batch_text).GetHashCode();
+                                                    row["NormText"] = GetNormText(batch_text);
+                                                }
+
+                                                if (xe.Fields["result"].Value.ToString() == "OK")
+                                                {
+                                                    row["Successful"] = 1;
+                                                    row["Failed"] = 0;
+                                                    row["Aborted"] = 0;
+
+                                                }
+                                                else if (xe.Fields["result"].Value.ToString() == "Error")
+                                                {
+                                                    row["Successful"] = 0;
+                                                    row["Failed"] = 1;
+                                                    row["Aborted"] = 0;
+
+                                                }
+                                                else if (xe.Fields["result"].Value.ToString() == "Abort")
+                                                {
+                                                    row["Successful"] = 0;
+                                                    row["Failed"] = 0;
+                                                    row["Aborted"] = 1;
+
+                                                }
+                                                else
+                                                {
+                                                    row["Successful"] = 0;
+                                                    row["Failed"] = 0;
+                                                    row["Aborted"] = 0;
+
+                                                }
+                                                row["Duration"] = xe.Fields["duration"].Value;
+                                                row["CpuTime"] = xe.Fields["cpu_time"].Value;
+                                                row["LogicalReads"] = xe.Fields["logical_reads"].Value;
+                                                row["PhysicalReads"] = xe.Fields["physical_reads"].Value;
+                                                row["Writes"] = xe.Fields["writes"].Value;
+                                                row["Rowcount"] = xe.Fields["row_count"].Value;
+
+                                                eventsProcessed++;
+
+                                                // Flush the DataTable to the database in batches based on BatchSize parameter
+                                                if ((eventsProcessed != 0) && (eventsProcessed % xeFile.BatchSize == 0))
+                                                {
+                                                    bcp.WriteToServer(dt);
+                                                    dt.Rows.Clear();
+                                                    batchCount++;
                                                 }
                                             }
-                                            else
+                                            catch (Exception ex)
                                             {
-                                                batch_text = xe.Fields["batch_text"].Value.ToString() ?? "";
-                                                row["TextDataHashId"] = batch_text.GetHashCode();
-                                                row["TextData"] = batch_text;
-                                                row["NormTextHashId"] = GetNormText(batch_text).GetHashCode();
-                                                row["NormText"] = GetNormText(batch_text);
-                                            }
-
-                                            if (xe.Fields["result"].Value.ToString() == "OK")
-                                            {
-                                                row["Successful"] = 1;
-                                                row["Failed"] = 0;
-                                                row["Aborted"] = 0;
-
-                                            }
-                                            else if (xe.Fields["result"].Value.ToString() == "Error")
-                                            {
-                                                row["Successful"] = 0;
-                                                row["Failed"] = 1;
-                                                row["Aborted"] = 0;
-
-                                            }
-                                            else if (xe.Fields["result"].Value.ToString() == "Abort")
-                                            {
-                                                row["Successful"] = 0;
-                                                row["Failed"] = 0;
-                                                row["Aborted"] = 1;
-
-                                            }
-                                            else
-                                            {
-                                                row["Successful"] = 0;
-                                                row["Failed"] = 0;
-                                                row["Aborted"] = 0;
-
-                                            }
-                                            row["Duration"] = xe.Fields["duration"].Value;
-                                            row["CpuTime"] = xe.Fields["cpu_time"].Value;
-                                            row["LogicalReads"] = xe.Fields["logical_reads"].Value;
-                                            row["PhysicalReads"] = xe.Fields["physical_reads"].Value;
-                                            row["Writes"] = xe.Fields["writes"].Value;
-                                            row["Rowcount"] = xe.Fields["row_count"].Value;
-
-                                            eventsProcessed++;
-
-                                            // Flush the DataTable to the database in batches based on BatchSize parameter
-                                            if ((eventsProcessed != 0) && (eventsProcessed % xeFile.BatchSize == 0))
-                                            {
-                                                bcp.WriteToServer(dt);
-                                                dt.Rows.Clear();
-                                                batchCount++;
+                                                Console.WriteLine($"Error message in File {xeFile.File.Name} - EventSequence {xe.Actions["event_sequence"].Value} - {ex.Message}");
                                             }
                                         }
                                     }
@@ -371,53 +379,71 @@ namespace XELoader
 
             var result = parser.Parse(new StringReader(origText), out errors);
 
-            if (result is TSqlScript script)
+            try
             {
-                var isDynamic = false;
-
-                foreach (var batch in script.ScriptTokenStream)
+                if (result is TSqlScript script)
                 {
-                    // If dynamic sql is being used and the token is text
-                    if ((isDynamic == true) && ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral")))
-                    {
-                        // Keep the text and then set the dynamic flag to false
-                        parsedText += batch.Text;
-                        isDynamic = false;
-                    }
-                    // If dynamic sql is not being used and the token is text
-                    else if ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral"))
-                    {
-                        // Replace text with static value
-                        parsedText += "{STR}";
+                    var isDynamic = false;
 
-                    }
-                    // If the token is an integer
-                    else if (batch.TokenType.ToString().StartsWith("Integer"))
+                    foreach (var batch in script.ScriptTokenStream)
                     {
-                        // Replace with a static value
-                        parsedText += "{##}";
+                        // If dynamic sql is being used and the token is text
+                        if ((isDynamic == true) && ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral")))
+                        {
+                            // Keep the text and then set the dynamic flag to false
+                            parsedText += batch.Text;
+                            isDynamic = false;
+                        }
+                        // If dynamic sql is not being used and the token is text
+                        else if ((batch.TokenType.ToString() == "AsciiStringLiteral") || (batch.TokenType.ToString() == "UnicodeStringLiteral"))
+                        {
+                            // Replace text with static value
+                            parsedText += "{STR}";
+
+                        }
+                        // If the token is an integer
+                        else if (batch.TokenType.ToString().StartsWith("Integer"))
+                        {
+                            // Replace with a static value
+                            parsedText += "{##}";
+                        }
+                        // If the token is a comment
+                        else if ((batch.TokenType.ToString() == "SingleLineComment") || (batch.TokenType.ToString() == "MultilineComment"))
+                        {
+                            // Do nothing
+                            parsedText += "";
+                        }
+                        // If the current statement starts with sp_executesql or sp_prepare
+                        else if (((batch.Text ?? "").StartsWith("sp_executesql")) || ((batch.Text ?? "") == "sp_prepare"))
+                        {
+                            // Set the dynamic flag to true and keep the text
+                            isDynamic = true;
+                            parsedText += batch.Text;
+                        }
+                        else
+                        {
+                            // For anything else keep the text
+                            parsedText += batch.Text;
+                        }
                     }
-                    // If the token is a comment
-                    else if ((batch.TokenType.ToString() == "SingleLineComment") || (batch.TokenType.ToString() == "MultilineComment"))
-                    {
-                        // Do nothing
-                        parsedText += "";
-                    }
-                    // If the current statement starts with sp_executesql or sp_prepare
-                    else if (((batch.Text ?? "").StartsWith("sp_executesql")) || ((batch.Text ?? "") == "sp_prepare"))
-                    {
-                        // Set the dynamic flag to true and keep the text
-                        isDynamic = true;
-                        parsedText += batch.Text;
-                    }
-                    else
-                    {
-                        // For anything else keep the text
-                        parsedText += batch.Text;
-                    }
+                    // Replace any remaining whitespace
+                    normText = Regex.Replace(parsedText, pattern, replacement).Trim();
                 }
-                // Replace any remaining whitespace
-                normText = Regex.Replace(parsedText, pattern, replacement).Trim();
+            }
+            catch (Exception ex)
+            {
+                if (errors.Count > 0)
+                {
+                    var errorArray = errors.ToArray();
+                    for (int i = 0; i < errorArray.Length; i++)
+                    {
+                        Console.WriteLine(errorArray[i].Message);
+                    }
+
+                    Console.WriteLine(ex.Message);
+
+                    throw new Exception("Failed to parse TextData!");
+                }
             }
             return normText;
         }
