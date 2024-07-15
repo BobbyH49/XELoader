@@ -35,6 +35,8 @@
             Console.WriteLine($"StartTime: {xer.StartTime.ToString()}");
             Console.WriteLine($"EndTime: {xer.EndTime.ToString()}");
             Console.WriteLine($"TimeZoneOffset: {xer.TimeZoneOffset}");
+            Console.WriteLine($"StartTimeOffset: {xer.StartTimeOffset.ToString()}");
+            Console.WriteLine($"EndTimeOffset: {xer.EndTimeOffset.ToString()}");
             Console.WriteLine($"BatchSize: {xer.BatchSize.ToString()}");
             Console.WriteLine($"ParallelThreads: {xer.ParallelThreads.ToString()}");
 
