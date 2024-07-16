@@ -6,6 +6,7 @@
         private FileInfo file;
         private DateTimeOffset startTimeOffset;
         private DateTimeOffset endTimeOffset;
+        private bool filterConnectionResets;
         private Int32 batchSize;
         private string sqlConnectionStr;
         private string fullBatchesTableName;
@@ -17,6 +18,7 @@
             this.file = file;
             this.startTimeOffset = xer.StartTimeOffset;
             this.endTimeOffset = xer.EndTimeOffset;
+            this.filterConnectionResets = xer.FilterConnectionResets;
             this.batchSize = xer.BatchSize;
             this.sqlConnectionStr = xer.SqlConnectionStr;
             this.fullBatchesTableName = xer.FullBatchesTableName;
@@ -48,6 +50,13 @@
             get
             {
                 return endTimeOffset;
+            }
+        }
+        public bool FilterConnectionResets
+        {
+            get
+            {
+                return filterConnectionResets;
             }
         }
         public Int32 BatchSize

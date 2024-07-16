@@ -37,6 +37,7 @@
             Console.WriteLine($"TimeZoneOffset: {xer.TimeZoneOffset}");
             Console.WriteLine($"StartTimeOffset: {xer.StartTimeOffset.ToString()}");
             Console.WriteLine($"EndTimeOffset: {xer.EndTimeOffset.ToString()}");
+            Console.WriteLine($"FilterConnectionResets: {xer.FilterConnectionResets.ToString()}");
             Console.WriteLine($"BatchSize: {xer.BatchSize.ToString()}");
             Console.WriteLine($"ParallelThreads: {xer.ParallelThreads.ToString()}");
 
@@ -65,7 +66,7 @@
             sqlCommand = $"CREATE NONCLUSTERED INDEX IX_{xer.BatchesTableName}_NormTextHashId ON {xer.FullBatchesTableName} (NormTextHashId ASC);";
             successMessage = $"\r\nNonclustered index IX_{xer.BatchesTableName}_NormTextHashId created successfully on {xer.FullBatchesTableName}!";
             failedMessage = $"Failed to create nonclustered index IX_{xer.BatchesTableName}_NormTextHashId on {xer.FullBatchesTableName}!";
-            commandTimeout = 300;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the unique batches table 
@@ -79,14 +80,14 @@
             sqlCommand = $"DECLARE @EventSequences TABLE (EventSequence BIGINT PRIMARY KEY);\r\n\r\nINSERT INTO @EventSequences\r\nSELECT EventSequence = MIN(EventSequence)\r\nFROM {xer.FullBatchesTableName}\r\nGROUP BY NormTextHashId;\r\n\r\nINSERT INTO {xer.FullUniqueBatchesTableName} (NormTextHashId, OrigText, NormText)\r\nSELECT NormTextHashId, OrigText = TextData, NormText\r\nFROM {xer.FullBatchesTableName}\r\nWHERE EventSequence IN (\r\n\tSELECT EventSequence  FROM @EventSequences\r\n);";
             successMessage = $"\r\nPopulated {xer.FullUniqueBatchesTableName} successfully!";
             failedMessage = $"Failed to populate {xer.FullUniqueBatchesTableName}!";
-            commandTimeout = 300;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create an index to be used to populate the summary tables
             sqlCommand = $"CREATE NONCLUSTERED COLUMNSTORE INDEX NCI_{xer.BatchesTableName} ON {xer.FullBatchesTableName} (NormTextHashId, TextDataHashId, Successful, Failed, Aborted, Duration, CpuTime, LogicalReads, PhysicalReads, Writes, [Rowcount]);";
             successMessage = $"\r\nNonclustered columnstore index NCI_{xer.BatchesTableName} created successfully on {xer.FullBatchesTableName}!";
             failedMessage = $"Failed to create nonclustered columnstore index NCI_{xer.BatchesTableName} on {xer.FullBatchesTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table
@@ -100,7 +101,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchSummaryTableName} (NormTextHashId, AllExecutions, DistinctExecutions, SuccessfulExecutions, FailedExecutions, AbortedExecutions)\r\nSELECT\r\n\tNormTextHashId\r\n\t, AllExecutions = COUNT(*)\r\n\t, DistinctExecutions = COUNT(DISTINCT TextDataHashId)\r\n\t, SuccessfulExecutions = SUM(Successful)\r\n\t, FailedExecutions = SUM(Failed)\r\n\t, AbortedExecutions = SUM(Aborted)\r\nFROM {xer.FullBatchesTableName}\r\nGROUP BY\r\n\tNormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for Duration
@@ -114,7 +115,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchDurationSummaryTableName} (NormTextHashId, MinDuration, MeanDuration, MaxDuration, TotalDuration, FirstQuartileDuration, MedianDuration, ThirdQuartileDuration, Percentile90Duration, Percentile95Duration, Percentile99Duration)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinDuration = MIN(Duration)\r\n\t, MeanDuration = AVG(Duration)\r\n\t, MaxDuration = MAX(Duration)\r\n\t, TotalDuration = SUM(Duration)\r\n\t, FirstQuartileDuration = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.25 THEN Duration ELSE 0 END) END\r\n\t, MedianDuration = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.5 THEN Duration ELSE 0 END) END\r\n\t, ThirdQuartileDuration = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.75 THEN Duration ELSE 0 END) END\r\n\t, Percentile90Duration = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.9 THEN Duration ELSE 0 END) END\r\n\t, Percentile95Duration = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.95 THEN Duration ELSE 0 END) END\r\n\t, Percentile99Duration = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Duration) ELSE MAX(CASE WHEN DurationExecutionNumber*1.0/ExecutionCount <= 0.99 THEN Duration ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, Duration\r\n\t\t, DurationExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY Duration ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchDurationSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchDurationSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for CpuTime
@@ -128,7 +129,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchCpuTimeSummaryTableName} (NormTextHashId, MinCpuTime, MeanCpuTime, MaxCpuTime, TotalCpuTime, FirstQuartileCpuTime, MedianCpuTime, ThirdQuartileCpuTime, Percentile90CpuTime, Percentile95CpuTime, Percentile99CpuTime)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinCpuTime = MIN(CpuTime)\r\n\t, MeanCpuTime = AVG(CpuTime)\r\n\t, MaxCpuTime = MAX(CpuTime)\r\n\t, TotalCpuTime = SUM(CpuTime)\r\n\t, FirstQuartileCpuTime = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.25 THEN CpuTime ELSE 0 END) END\r\n\t, MedianCpuTime = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.5 THEN CpuTime ELSE 0 END) END\r\n\t, ThirdQuartileCpuTime = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.75 THEN CpuTime ELSE 0 END) END\r\n\t, Percentile90CpuTime = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.9 THEN CpuTime ELSE 0 END) END\r\n\t, Percentile95CpuTime = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.95 THEN CpuTime ELSE 0 END) END\r\n\t, Percentile99CpuTime = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(CpuTime) ELSE MAX(CASE WHEN CpuTimeExecutionNumber*1.0/ExecutionCount <= 0.99 THEN CpuTime ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, CpuTime\r\n\t\t, CpuTimeExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY CpuTime ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchCpuTimeSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchCpuTimeSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for LogicalReads
@@ -142,7 +143,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchLogicalReadsSummaryTableName} (NormTextHashId, MinLogicalReads, MeanLogicalReads, MaxLogicalReads, TotalLogicalReads, FirstQuartileLogicalReads, MedianLogicalReads, ThirdQuartileLogicalReads, Percentile90LogicalReads, Percentile95LogicalReads, Percentile99LogicalReads)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinLogicalReads = MIN(LogicalReads)\r\n\t, MeanLogicalReads = AVG(LogicalReads)\r\n\t, MaxLogicalReads = MAX(LogicalReads)\r\n\t, TotalLogicalReads = SUM(LogicalReads)\r\n\t, FirstQuartileLogicalReads = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.25 THEN LogicalReads ELSE 0 END) END\r\n\t, MedianLogicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.5 THEN LogicalReads ELSE 0 END) END\r\n\t, ThirdQuartileLogicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.75 THEN LogicalReads ELSE 0 END) END\r\n\t, Percentile90LogicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.9 THEN LogicalReads ELSE 0 END) END\r\n\t, Percentile95LogicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.95 THEN LogicalReads ELSE 0 END) END\r\n\t, Percentile99LogicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(LogicalReads) ELSE MAX(CASE WHEN LogicalReadsExecutionNumber*1.0/ExecutionCount <= 0.99 THEN LogicalReads ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, LogicalReads\r\n\t\t, LogicalReadsExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY LogicalReads ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchLogicalReadsSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchLogicalReadsSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for PhysicalReads
@@ -156,7 +157,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchPhysicalReadsSummaryTableName} (NormTextHashId, MinPhysicalReads, MeanPhysicalReads, MaxPhysicalReads, TotalPhysicalReads, FirstQuartilePhysicalReads, MedianPhysicalReads, ThirdQuartilePhysicalReads, Percentile90PhysicalReads, Percentile95PhysicalReads, Percentile99PhysicalReads)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinPhysicalReads = MIN(PhysicalReads)\r\n\t, MeanPhysicalReads = AVG(PhysicalReads)\r\n\t, MaxPhysicalReads = MAX(PhysicalReads)\r\n\t, TotalPhysicalReads = SUM(PhysicalReads)\r\n\t, FirstQuartilePhysicalReads = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.25 THEN PhysicalReads ELSE 0 END) END\r\n\t, MedianPhysicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.5 THEN PhysicalReads ELSE 0 END) END\r\n\t, ThirdQuartilePhysicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.75 THEN PhysicalReads ELSE 0 END) END\r\n\t, Percentile90PhysicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.9 THEN PhysicalReads ELSE 0 END) END\r\n\t, Percentile95PhysicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.95 THEN PhysicalReads ELSE 0 END) END\r\n\t, Percentile99PhysicalReads = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(PhysicalReads) ELSE MAX(CASE WHEN PhysicalReadsExecutionNumber*1.0/ExecutionCount <= 0.99 THEN PhysicalReads ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, PhysicalReads\r\n\t\t, PhysicalReadsExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY PhysicalReads ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchPhysicalReadsSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchPhysicalReadsSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for Writes
@@ -170,7 +171,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchWritesSummaryTableName} (NormTextHashId, MinWrites, MeanWrites, MaxWrites, TotalWrites, FirstQuartileWrites, MedianWrites, ThirdQuartileWrites, Percentile90Writes, Percentile95Writes, Percentile99Writes)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinWrites = MIN(Writes)\r\n\t, MeanWrites = AVG(Writes)\r\n\t, MaxWrites = MAX(Writes)\r\n\t, TotalWrites = SUM(Writes)\r\n\t, FirstQuartileWrites = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.25 THEN Writes ELSE 0 END) END\r\n\t, MedianWrites = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.5 THEN Writes ELSE 0 END) END\r\n\t, ThirdQuartileWrites = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.75 THEN Writes ELSE 0 END) END\r\n\t, Percentile90Writes = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.9 THEN Writes ELSE 0 END) END\r\n\t, Percentile95Writes = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.95 THEN Writes ELSE 0 END) END\r\n\t, Percentile99Writes = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN(Writes) ELSE MAX(CASE WHEN WritesExecutionNumber*1.0/ExecutionCount <= 0.99 THEN Writes ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, Writes\r\n\t\t, WritesExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY Writes ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchWritesSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchWritesSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the summary table for Rowcount
@@ -184,7 +185,7 @@
             sqlCommand = $"INSERT INTO {xer.FullBatchRowcountSummaryTableName} (NormTextHashId, MinRowcount, MeanRowcount, MaxRowcount, TotalRowcount, FirstQuartileRowcount, MedianRowcount, ThirdQuartileRowcount, Percentile90Rowcount, Percentile95Rowcount, Percentile99Rowcount)\r\nSELECT\r\n\tNormTextHashId\r\n\t, MinRowcount = MIN([Rowcount])\r\n\t, MeanRowcount = AVG([Rowcount])\r\n\t, MaxRowcount = MAX([Rowcount])\r\n\t, TotalRowcount = SUM([Rowcount])\r\n\t, FirstQuartileRowcount = CASE WHEN MAX(ExecutionCount) <= 3 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.25 THEN [Rowcount] ELSE 0 END) END\r\n\t, MedianRowcount = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.5 THEN [Rowcount] ELSE 0 END) END\r\n\t, ThirdQuartileRowcount = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.75 THEN [Rowcount] ELSE 0 END) END\r\n\t, Percentile90Rowcount = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.9 THEN [Rowcount] ELSE 0 END) END\r\n\t, Percentile95Rowcount = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.95 THEN [Rowcount] ELSE 0 END) END\r\n\t, Percentile99Rowcount = CASE WHEN MAX(ExecutionCount) = 1 THEN MIN([Rowcount]) ELSE MAX(CASE WHEN RowcountExecutionNumber*1.0/ExecutionCount <= 0.99 THEN [Rowcount] ELSE 0 END) END\r\nFROM (\r\n\tSELECT\r\n\t\tNormTextHashId\r\n\t\t, [Rowcount]\r\n\t\t, RowcountExecutionNumber = ROW_NUMBER() OVER(PARTITION BY NormTextHashId ORDER BY [Rowcount] ASC)\r\n\t\t, ExecutionCount = COUNT(*) OVER(PARTITION BY NormTextHashId)\r\n\tFROM {xer.FullBatchesTableName}\r\n) SummaryData\r\nGROUP BY NormTextHashId\r\nORDER BY NormTextHashId;";
             successMessage = $"\r\nPopulated {xer.BatchRowcountSummaryTableName} successfully!";
             failedMessage = $"Failed to populate {xer.BatchRowcountSummaryTableName}!";
-            commandTimeout = 600;
+            commandTimeout = 3600;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             Console.WriteLine($"Ended at {DateTimeOffset.Now}!");
