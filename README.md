@@ -24,5 +24,6 @@
 * StartTime - Filters the timestamp with a default of 01/01/1900 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
 * EndTime  - Filters the timestamp with a default of 31/12/9999 (e.g. UK format is dd/mm/yyyy hh:mm:ss or US format is mm/dd/yyyy hh:mm:ss)
 * TimeZoneOffset - Timezone to use if filtering on StartTime and EndTime (format is +/-hh:mm)
+* FilterConnectionResets - Do not load sp_reset_connection batches (default is False)
 * BatchSize - Throttle the BatchSize but can cause timeouts (try starting with a size that allows for around 20-25 batches per file)
 * ParallelThreads - 1 or many threads but can cause CPU or Memory issues (try starting with 4)
