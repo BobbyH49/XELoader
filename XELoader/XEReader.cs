@@ -258,7 +258,7 @@ namespace XELoader
                                     if ((xe.Name == "rpc_completed") || (xe.Name == "sql_batch_completed"))
                                     {
                                         // If user wants to filter out sp_reset_connection statements
-                                        if ((xeFile.FilterConnectionResets == false) || (xe.Fields["object_name"].Value.ToString() != "sp_reset_connection"))
+                                        if ((xeFile.FilterConnectionResets == false) || (xe.Name != "rpc_completed") || (xe.Fields["object_name"].Value.ToString() != "sp_reset_connection"))
                                         {
                                             // Only process events that have a Timestamp that fall within the StartTime and EndTime boundaries
                                             if ((xe.Timestamp >= xeFile.StartTimeOffset) && (xe.Timestamp <= xeFile.EndTimeOffset))
