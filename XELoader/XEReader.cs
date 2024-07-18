@@ -217,6 +217,7 @@ namespace XELoader
 
                 DataRow row;
                 XEFile? xeFile;
+                string databaseNormText;
 
                 // While there are files remaining in the queue
                 while (xeFileQueue.Count > 0)
@@ -285,12 +286,14 @@ namespace XELoader
                                                         row["TextData"] = statement;
                                                         if ((!object_name.StartsWith("sp_execute")) && (object_name != "sp_prepare"))
                                                         {
-                                                            row["NormTextHashId"] = object_name.GetHashCode();
+                                                            databaseNormText = string.Concat(databaseName, ", ", object_name);
+                                                            row["NormTextHashId"] = databaseNormText.GetHashCode();
                                                             row["NormText"] = object_name;
                                                         }
                                                         else
                                                         {
-                                                            row["NormTextHashId"] = GetNormText(statement).GetHashCode();
+                                                            databaseNormText = string.Concat(databaseName, ", ", statement);
+                                                            row["NormTextHashId"] = databaseNormText.GetHashCode();
                                                             row["NormText"] = GetNormText(statement);
                                                         }
                                                     }
@@ -299,7 +302,8 @@ namespace XELoader
                                                         batch_text = xe.Fields["batch_text"].Value.ToString() ?? "";
                                                         row["TextDataHashId"] = batch_text.GetHashCode();
                                                         row["TextData"] = batch_text;
-                                                        row["NormTextHashId"] = GetNormText(batch_text).GetHashCode();
+                                                        databaseNormText = string.Concat(databaseName, ", ", batch_text);
+                                                        row["NormTextHashId"] = databaseNormText.GetHashCode();
                                                         row["NormText"] = GetNormText(batch_text);
                                                     }
 

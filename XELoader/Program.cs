@@ -70,14 +70,14 @@
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the unique batches table 
-            sqlCommand = $"CREATE TABLE {xer.FullUniqueBatchesTableName} (\r\n\tNormTextHashId int\r\n\t, EventType nvarchar(20)\r\n\t, OrigText nvarchar(max)\r\n\t, NormText nvarchar(max)\r\n\t, constraint PKC_{xer.UniqueBatchesTableName}\r\n\t\tprimary key clustered (NormTextHashId asc)\r\n);";
+            sqlCommand = $"CREATE TABLE {xer.FullUniqueBatchesTableName} (\r\n\tNormTextHashId int\r\n\t, EventType nvarchar(20)\r\n\t, DatabaseName nvarchar(200)\r\n\t, OrigText nvarchar(max)\r\n\t, NormText nvarchar(max)\r\n\t, constraint PKC_{xer.UniqueBatchesTableName}\r\n\t\tprimary key clustered (NormTextHashId asc)\r\n);";
             successMessage = $"\r\nTable {xer.FullUniqueBatchesTableName} created successfully!";
             failedMessage = $"Failed to create table {xer.FullUniqueBatchesTableName}!";
             commandTimeout = 60;
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Load the unique batches table
-            sqlCommand = $"DECLARE @EventSequences TABLE (EventSequence BIGINT PRIMARY KEY);\r\n\r\nINSERT INTO @EventSequences\r\nSELECT EventSequence = MIN(EventSequence)\r\nFROM {xer.FullBatchesTableName}\r\nGROUP BY NormTextHashId;\r\n\r\nINSERT INTO {xer.FullUniqueBatchesTableName} (NormTextHashId, EventType, OrigText, NormText)\r\nSELECT NormTextHashId, EventType, OrigText = TextData, NormText\r\nFROM {xer.FullBatchesTableName}\r\nWHERE EventSequence IN (\r\n\tSELECT EventSequence  FROM @EventSequences\r\n);";
+            sqlCommand = $"DECLARE @EventSequences TABLE (EventSequence BIGINT PRIMARY KEY);\r\n\r\nINSERT INTO @EventSequences\r\nSELECT EventSequence = MIN(EventSequence)\r\nFROM {xer.FullBatchesTableName}\r\nGROUP BY NormTextHashId;\r\n\r\nINSERT INTO {xer.FullUniqueBatchesTableName} (NormTextHashId, EventType, DatabaseName, OrigText, NormText)\r\nSELECT NormTextHashId, EventType, DatabaseName, OrigText = TextData, NormText\r\nFROM {xer.FullBatchesTableName}\r\nWHERE EventSequence IN (\r\n\tSELECT EventSequence  FROM @EventSequences\r\n);";
             successMessage = $"\r\nPopulated {xer.FullUniqueBatchesTableName} successfully!";
             failedMessage = $"Failed to populate {xer.FullUniqueBatchesTableName}!";
             commandTimeout = 3600;
