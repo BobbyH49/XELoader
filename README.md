@@ -6,8 +6,7 @@
 * Once the tblBatches table is loaded it will generate a tblUniqueBatches and several summary tables to provide full stats on all SQL Server batch metrics
 * It uses the SQL Server 2022 TSQLParser but is backward compatible with other SQL Server versions
 * Currently only processes rpc_completed and sql_batch_completed events but can be extended
-* There is very little error handling at the moment but can easily be included
-* This project is to show what you can do as an alternative to using ReadTrace as part of the RML Utilities by Microsoft, and it can easily be extended
+* Also includes a SQL Server script and Excel Template to generate results for a report that will give you daily charts along with individual statistics about each batch.
 
 ### XELoader parameters
 
