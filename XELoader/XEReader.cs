@@ -164,9 +164,10 @@ namespace XELoader
                 Int64 eventsProcessed;
                 Int32 batchCount;
 
-                string statement;
-                string object_name;
-                string batch_text;
+                string objectNameStr;
+                string textDataStr;
+                string normTextStr;
+                string databaseNormTextStr;
 
                 // Create a DataTable to store the data that will be uploaded to the database
                 DataTable dt = new DataTable();
@@ -217,7 +218,6 @@ namespace XELoader
 
                 DataRow row;
                 XEFile? xeFile;
-                string databaseNormText;
 
                 // While there are files remaining in the queue
                 while (xeFileQueue.Count > 0)
@@ -277,35 +277,33 @@ namespace XELoader
                                                     row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
                                                     row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
                                                     row["NormTextHashId"] = 0;
+
                                                     // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
                                                     if (xe.Name == "rpc_completed")
                                                     {
-                                                        statement = xe.Fields["statement"].Value.ToString() ?? "";
-                                                        object_name = xe.Fields["object_name"].Value.ToString() ?? "";
-                                                        row["TextDataHashId"] = statement.GetHashCode();
-                                                        row["TextData"] = statement;
-                                                        if ((!object_name.StartsWith("sp_execute")) && (object_name != "sp_prepare"))
+                                                        objectNameStr = xe.Fields["object_name"].Value.ToString() ?? "";
+
+                                                        if ((!objectNameStr.StartsWith("sp_execute")) && (objectNameStr != "sp_prepare"))
                                                         {
-                                                            databaseNormText = string.Concat(databaseName, ", ", object_name);
-                                                            row["NormTextHashId"] = databaseNormText.GetHashCode();
-                                                            row["NormText"] = object_name;
+                                                            textDataStr = objectNameStr;
                                                         }
                                                         else
                                                         {
-                                                            databaseNormText = string.Concat(databaseName, ", ", statement);
-                                                            row["NormTextHashId"] = databaseNormText.GetHashCode();
-                                                            row["NormText"] = GetNormText(statement);
+                                                            textDataStr = xe.Fields["statement"].Value.ToString() ?? "";
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        batch_text = xe.Fields["batch_text"].Value.ToString() ?? "";
-                                                        row["TextDataHashId"] = batch_text.GetHashCode();
-                                                        row["TextData"] = batch_text;
-                                                        databaseNormText = string.Concat(databaseName, ", ", batch_text);
-                                                        row["NormTextHashId"] = databaseNormText.GetHashCode();
-                                                        row["NormText"] = GetNormText(batch_text);
+                                                        textDataStr = xe.Fields["batch_text"].Value.ToString() ?? ""; ;
                                                     }
+
+                                                    row["TextDataHashId"] = textDataStr.GetHashCode();
+                                                    row["TextData"] = textDataStr;
+
+                                                    normTextStr = GetNormText(textDataStr);
+                                                    databaseNormTextStr = string.Concat(databaseName, ", ", normTextStr);
+                                                    row["NormTextHashId"] = databaseNormTextStr.GetHashCode();
+                                                    row["NormText"] = normTextStr;
 
                                                     if (xe.Fields["result"].Value.ToString() == "OK")
                                                     {
