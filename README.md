@@ -8,6 +8,18 @@
 * Currently only processes rpc_completed and sql_batch_completed events but can be extended
 * Also includes a SQL Server script and Excel Template to generate results for a report that will give you daily charts along with individual statistics about each batch.
 
+### Dependencies
+
+**Assemblies**
+
+* Microsoft.SqlServer.XE.Core (16.0.0.0)
+* Microsoft.SqlServer.XEvent.Linq (16.0.0.0)
+
+**Packages**
+
+* Microsoft.Data.SqlClient (5.2.1)
+* Microsoft.SqlServer.TransactSql.ScriptDom (161.9123.0)
+
 ### XELoader parameters
 
 * SqlInstanceName - Your default or named SQL Instance (e.g. MyServer\MyInstance)
