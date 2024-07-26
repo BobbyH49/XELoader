@@ -42,27 +42,9 @@ SELECT
 	, hr.AvgRowcount
 FROM PeopleWeb.tblHourlyReportSuffix hr
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub ON ub.NormTextHashId = hr.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
+--WHERE ub.NormText in (
+--	N''
+--)
 ORDER BY DateTime ASC, hr.NormTextHashId ASC;
 
 -- Add the subset of NormText that you want to filter by
@@ -83,28 +65,10 @@ SELECT
 FROM PeopleWeb.tblBatchDurationSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
-ORDER BY ub.NormText ASC;
+--WHERE ub.NormText in (
+--	N''
+--)
+ORDER BY TotalDurationSeconds DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
@@ -124,27 +88,9 @@ SELECT
 FROM PeopleWeb.tblBatchCpuTimeSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
+--WHERE ub.NormText in (
+--	N''
+--)
 ORDER BY TotalCpuTimeSeconds DESC;
 
 -- Add the subset of NormText that you want to filter by
@@ -165,28 +111,10 @@ SELECT
 FROM PeopleWeb.tblBatchLogicalReadsSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
-ORDER BY ub.NormText ASC;
+--WHERE ub.NormText in (
+--	N''
+--)
+ORDER BY TotalLogicalReadsMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
@@ -206,28 +134,10 @@ SELECT
 FROM PeopleWeb.tblBatchPhysicalReadsSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
-ORDER BY ub.NormText ASC;
+--WHERE ub.NormText in (
+--	N''
+--)
+ORDER BY TotalPhysicalReadsMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
@@ -247,28 +157,10 @@ SELECT
 FROM PeopleWeb.tblBatchWritesSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
-ORDER BY ub.NormText ASC;
+--WHERE ub.NormText in (
+--	N''
+--)
+ORDER BY TotalWritesMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
@@ -288,25 +180,7 @@ SELECT
 FROM PeopleWeb.tblBatchRowcountSummarySuffix bss
 JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
 JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
-WHERE ub.NormText in (
-	N'usp_Process_GetUserByQueryId'
-	, N'usp_API_GetQueryResultByQueryName'
-	, N'usp_Detail_GetListWithAdvancedSearch'
-	, N'usp_V4_MobileAPI_GetMainDashboardData'
-	, N'usp_DocumentCategory_GetForEmployee'
-	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
-	, N'usp_V4_MobileAPI_GetPlannerDetailData'
-	, N'usp_DocumentCategory_GetAllByCompanyId'
-	, N'usp_QueryDefDBTypeFilter_GetById'
-	, N'usp_Query_Get_Active'
-	, N'usp_Query_GetAggregateFunction'
-	, N'usp_Process_GetList'
-	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
-	, N'usp_API_GetQueryResult'
-	, N'usp_Detail_GetCompanyInfoById'
-	, N'usp_Applicant_GetApplicantList'
-	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
-	, N'usp_APIKey_GetByUniqueAPIKey'
-	, N'usp_Query_UpdateFinalQuery'
-)
-ORDER BY ub.NormText ASC;
+--WHERE ub.NormText in (
+--	N''
+--)
+ORDER BY TotalRowcount DESC;
