@@ -10,6 +10,7 @@
         private Int32 batchSize;
         private string sqlConnectionStr;
         private string fullBatchesTableName;
+        private bool captureSchemaName;
 
         public XEFile(Int32 fileNumber, FileInfo file, XEReader xer)
         {
@@ -22,6 +23,7 @@
             this.batchSize = xer.BatchSize;
             this.sqlConnectionStr = xer.SqlConnectionStr;
             this.fullBatchesTableName = xer.FullBatchesTableName;
+            this.captureSchemaName = xer.CaptureSchemaName;
         }
         public Int32 FileNumber
         {
@@ -78,6 +80,13 @@
             get
             {
                 return fullBatchesTableName;
+            }
+        }
+        public bool CaptureSchemaName
+        {
+            get
+            {
+                return captureSchemaName;
             }
         }
     }

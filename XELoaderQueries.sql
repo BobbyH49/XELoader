@@ -1,11 +1,12 @@
 -- Provide the number of VCores for the server you are monitoring
--- Add your Replace the suffix of 20240716 with your own suffix for the tables generated including tblHourlyReport which will be created by this script
+-- Find and Replace the word "Suffix" with your own suffix for the tables generated, including tblHourlyReport which will be created by this script
 
 DECLARE
-	@VCores INT = 24;
+	@VCores INT = 20;
 
 SELECT
 	DateTime = DATEADD(mi, DATEPART(mi, Timestamp), DATEADD(hh, DATEPART(hh, Timestamp), CAST(CAST(Timestamp AS DATE) AS DATETIME)))
+	, DatabaseName
 	, NormTextHashId
 	, ExecutionCount = COUNT(*)
 	, Duration_Microseconds = SUM(Duration)
@@ -15,10 +16,11 @@ SELECT
 	, PhysicalReadsPages = SUM(PhysicalReads)
 	, WritesPages = SUM(Writes)
 	, AvgRowcount = AVG([Rowcount])
-INTO XELoader.tblHourlyReport20240716
-FROM XELoader.tblBatches20240716
+INTO PeopleWeb.tblHourlyReportSuffix
+FROM PeopleWeb.tblBatchesSuffix
 GROUP BY
 	DATEADD(mi, DATEPART(mi, Timestamp), DATEADD(hh, DATEPART(hh, Timestamp), CAST(CAST(Timestamp AS DATE) AS DATETIME)))
+	, DatabaseName
 	, NormTextHashId
 ORDER BY
 	DateTime
@@ -28,6 +30,7 @@ ORDER BY
 -- Add the subset of NormText that you want to filter by
 SELECT
 	hr.DateTime
+	, ub.DatabaseName
 	, ub.NormText
 	, hr.ExecutionCount
 	, hr.Duration_Microseconds
@@ -37,17 +40,35 @@ SELECT
 	, hr.PhysicalReadsPages
 	, hr.WritesPages
 	, hr.AvgRowcount
-FROM XELoader.tblHourlyReport20240716 hr
-JOIN XELoader.tblUniqueBatches20240716 ub ON ub.NormTextHashId = hr.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblHourlyReportSuffix hr
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub ON ub.NormTextHashId = hr.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY DateTime ASC, hr.NormTextHashId ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinDuration
 	, bss.MeanDuration
@@ -59,18 +80,36 @@ SELECT
 	, bss.Percentile90Duration
 	, bss.Percentile95Duration
 	, bss.Percentile99Duration
-FROM XELoader.tblBatchDurationSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblBatchDurationSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY ub.NormText ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinCpuTime
 	, bss.MeanCpuTime
@@ -82,18 +121,36 @@ SELECT
 	, bss.Percentile90CpuTime
 	, bss.Percentile95CpuTime
 	, bss.Percentile99CpuTime
-FROM XELoader.tblBatchCpuTimeSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
-ORDER BY ub.NormText ASC;
+FROM PeopleWeb.tblBatchCpuTimeSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
+ORDER BY TotalCpuTimeSeconds DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinLogicalReads
 	, bss.MeanLogicalReads
@@ -105,18 +162,36 @@ SELECT
 	, bss.Percentile90LogicalReads
 	, bss.Percentile95LogicalReads
 	, bss.Percentile99LogicalReads
-FROM XELoader.tblBatchLogicalReadsSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblBatchLogicalReadsSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY ub.NormText ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinPhysicalReads
 	, bss.MeanPhysicalReads
@@ -128,18 +203,36 @@ SELECT
 	, bss.Percentile90PhysicalReads
 	, bss.Percentile95PhysicalReads
 	, bss.Percentile99PhysicalReads
-FROM XELoader.tblBatchPhysicalReadsSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblBatchPhysicalReadsSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY ub.NormText ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinWrites
 	, bss.MeanWrites
@@ -151,18 +244,36 @@ SELECT
 	, bss.Percentile90Writes
 	, bss.Percentile95Writes
 	, bss.Percentile99Writes
-FROM XELoader.tblBatchWritesSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblBatchWritesSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY ub.NormText ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.NormText
+	ub.DatabaseName
+	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinRowcount
 	, bss.MeanRowcount
@@ -174,11 +285,28 @@ SELECT
 	, bss.Percentile90Rowcount
 	, bss.Percentile95Rowcount
 	, bss.Percentile99Rowcount
-FROM XELoader.tblBatchRowcountSummary20240716 bss
-JOIN XELoader.tblBatchSummary20240716 bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN XELoader.tblUniqueBatches20240716 ub on ub.NormTextHashId = bss.NormTextHashId
---WHERE ub.NormText in (
---	N''
---	, N''
---)
+FROM PeopleWeb.tblBatchRowcountSummarySuffix bss
+JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+WHERE ub.NormText in (
+	N'usp_Process_GetUserByQueryId'
+	, N'usp_API_GetQueryResultByQueryName'
+	, N'usp_Detail_GetListWithAdvancedSearch'
+	, N'usp_V4_MobileAPI_GetMainDashboardData'
+	, N'usp_DocumentCategory_GetForEmployee'
+	, N'usp_MenuAccessForHiringLeadAndJobApprovers_GetList'
+	, N'usp_V4_MobileAPI_GetPlannerDetailData'
+	, N'usp_DocumentCategory_GetAllByCompanyId'
+	, N'usp_QueryDefDBTypeFilter_GetById'
+	, N'usp_Query_Get_Active'
+	, N'usp_Query_GetAggregateFunction'
+	, N'usp_Process_GetList'
+	, N'usp_LogbookScreenHeader_GetLogbookScreenList'
+	, N'usp_API_GetQueryResult'
+	, N'usp_Detail_GetCompanyInfoById'
+	, N'usp_Applicant_GetApplicantList'
+	, N'usp_V4_MobileAPI_GetAllCompanyDirectoryEmployeeDetails'
+	, N'usp_APIKey_GetByUniqueAPIKey'
+	, N'usp_Query_UpdateFinalQuery'
+)
 ORDER BY ub.NormText ASC;

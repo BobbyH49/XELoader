@@ -40,6 +40,7 @@
             Console.WriteLine($"FilterConnectionResets: {xer.FilterConnectionResets.ToString()}");
             Console.WriteLine($"BatchSize: {xer.BatchSize.ToString()}");
             Console.WriteLine($"ParallelThreads: {xer.ParallelThreads.ToString()}");
+            Console.WriteLine($"CaptureSchemaName: {xer.CaptureSchemaName.ToString()}");
 
             string sqlCommand;
             string successMessage;
@@ -54,7 +55,7 @@
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);
 
             // Create the main batches table
-            sqlCommand = $"CREATE TABLE {xer.FullBatchesTableName} (\r\n\tEventSequence bigint\r\n\t, EventType nvarchar(20)\r\n\t, Timestamp datetimeoffset\r\n\t, ClientHostname nvarchar(500)\r\n\t, ClientAppName nvarchar(1000)\r\n\t, DatabaseName nvarchar(200)\r\n\t, TextDataHashId int\r\n\t, TextData nvarchar(max)\r\n\t, NormTextHashId int\r\n\t, NormText nvarchar(max)\r\n\t, Successful tinyint\r\n\t, Failed tinyint\r\n\t, Aborted tinyint\r\n\t, Duration bigint\r\n\t, CpuTime bigint\r\n\t, LogicalReads bigint\r\n\t, PhysicalReads bigint\r\n\t, Writes bigint\r\n\t, [Rowcount] bigint\r\n\t, constraint PKC_{xer.BatchesTableName}\r\n\t\tprimary key clustered (EventSequence asc)\r\n);";
+            sqlCommand = $"CREATE TABLE {xer.FullBatchesTableName} (\r\n\tEventSequence bigint\r\n\t, EventType nvarchar(20)\r\n\t, Timestamp datetimeoffset\r\n\t, ClientHostname nvarchar(500)\r\n\t, ClientAppName nvarchar(1000)\r\n\t, Username nvarchar(200)\r\n\t, DatabaseName nvarchar(200)\r\n\t, TextDataHashId int\r\n\t, TextData nvarchar(max)\r\n\t, NormTextHashId int\r\n\t, NormText nvarchar(max)\r\n\t, Successful tinyint\r\n\t, Failed tinyint\r\n\t, Aborted tinyint\r\n\t, Duration bigint\r\n\t, CpuTime bigint\r\n\t, LogicalReads bigint\r\n\t, PhysicalReads bigint\r\n\t, Writes bigint\r\n\t, [Rowcount] bigint\r\n\t, constraint PKC_{xer.BatchesTableName}\r\n\t\tprimary key clustered (EventSequence asc)\r\n);";
             successMessage = $"\r\nTable {xer.FullBatchesTableName} created successfully!";
             failedMessage = $"Failed to create table {xer.FullBatchesTableName}!";
             result = xer.ExecuteSqlCommand(xer.SqlConnectionStr, sqlCommand, successMessage, failedMessage, commandTimeout);

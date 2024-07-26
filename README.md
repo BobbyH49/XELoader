@@ -38,3 +38,4 @@
 * FilterConnectionResets - Do not load sp_reset_connection batches (default is False)
 * BatchSize - Throttle the BatchSize but can cause timeouts (try starting with a size that allows for around 20-25 batches per file)
 * ParallelThreads - 1 or many threads but can cause CPU or Memory issues (try starting with 4)
+* CaptureSchemaName - Attempts to capture the SchemaName for rpc objects using the TextData (default is false as this option will slow down processing of rpc_completed events)

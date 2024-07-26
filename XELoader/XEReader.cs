@@ -24,6 +24,7 @@ namespace XELoader
         private bool filterConnectionResets = false;
         private Int32 batchSize;
         private Int16 parallelThreads;
+        private bool captureSchemaName;
 
         public XEReader(Dictionary<string, string> paramList)
         {
@@ -40,7 +41,7 @@ namespace XELoader
             if (paramList.ContainsKey("TrustCertificate"))
                 bool.TryParse(paramList["TrustCertificate"], out this.trustCertificate);
             else
-                trustCertificate = true;
+                this.trustCertificate = true;
 
             if (paramList.ContainsKey("Username"))
                 this.username = paramList["Username"];
@@ -89,6 +90,11 @@ namespace XELoader
                 Int16.TryParse(paramList["ParallelThreads"], out this.parallelThreads);
             else
                 this.parallelThreads = 1;
+
+            if (paramList.ContainsKey("CaptureSchemaName"))
+                bool.TryParse(paramList["CaptureSchemaName"], out this.captureSchemaName);
+            else
+                this.captureSchemaName = false;
         }
         public Int16 ExecuteSqlCommand(string sqlConnectionStr, string sqlCommand, string successMessage, string failedMessage, Int32 commandTimeout)
         {
@@ -160,63 +166,6 @@ namespace XELoader
             {
                 Queue<XEFile> xeFileQueue = (Queue<XEFile>)xeFileQueueObj;
 
-                Int64 eventsRead;
-                Int64 eventsProcessed;
-                Int32 batchCount;
-
-                string objectNameStr;
-                string textDataStr;
-                string normTextStr;
-                string databaseNormTextStr;
-
-                // Create a DataTable to store the data that will be uploaded to the database
-                DataTable dt = new DataTable();
-                DataColumn eventSequence = new DataColumn("EventSequence", typeof(Int64));
-                dt.Columns.Add(eventSequence);
-                DataColumn eventType = new DataColumn("EventType", typeof(string));
-                eventType.MaxLength = 20;
-                dt.Columns.Add(eventType);
-                DataColumn timestamp = new DataColumn("Timestamp", typeof(DateTimeOffset));
-                dt.Columns.Add(timestamp);
-                DataColumn clientHostname = new DataColumn("ClientHostname", typeof(string));
-                clientHostname.MaxLength = 500;
-                dt.Columns.Add(clientHostname);
-                DataColumn clientAppName = new DataColumn("ClientAppName", typeof(string));
-                clientAppName.MaxLength = 1000;
-                dt.Columns.Add(clientAppName);
-                DataColumn databaseName = new DataColumn("DatabaseName", typeof(string));
-                databaseName.MaxLength = 200;
-                dt.Columns.Add(databaseName);
-                DataColumn textDataHashId = new DataColumn("TextDataHashId", typeof(Int32));
-                dt.Columns.Add(textDataHashId);
-                DataColumn textData = new DataColumn("TextData", typeof(string));
-                textData.MaxLength = -1;
-                dt.Columns.Add(textData);
-                DataColumn normTextHashId = new DataColumn("NormTextHashId", typeof(Int32));
-                dt.Columns.Add(normTextHashId);
-                DataColumn normText = new DataColumn("NormText", typeof(string));
-                normText.MaxLength = -1;
-                dt.Columns.Add(normText);
-                DataColumn successful = new DataColumn("Successful", typeof(UInt16));
-                dt.Columns.Add(successful);
-                DataColumn failed = new DataColumn("Failed", typeof(UInt16));
-                dt.Columns.Add(failed);
-                DataColumn aborted = new DataColumn("Aborted", typeof(UInt16));
-                dt.Columns.Add(aborted);
-                DataColumn duration = new DataColumn("Duration", typeof(UInt64));
-                dt.Columns.Add(duration);
-                DataColumn cpuTime = new DataColumn("CpuTime", typeof(UInt64));
-                dt.Columns.Add(cpuTime);
-                DataColumn logicalReads = new DataColumn("LogicalReads", typeof(UInt64));
-                dt.Columns.Add(logicalReads);
-                DataColumn physicalReads = new DataColumn("PhysicalReads", typeof(UInt64));
-                dt.Columns.Add(physicalReads);
-                DataColumn writes = new DataColumn("Writes", typeof(UInt64));
-                dt.Columns.Add(writes);
-                DataColumn rowcount = new DataColumn("Rowcount", typeof(UInt64));
-                dt.Columns.Add(rowcount);
-
-                DataRow row;
                 XEFile? xeFile;
 
                 // While there are files remaining in the queue
@@ -233,150 +182,275 @@ namespace XELoader
                     // If the thread has retrieved a file then process
                     if (xeFile != null)
                     {
-                        Console.WriteLine($"\r\nProcessing file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
-
-                        eventsRead = 0;
-                        eventsProcessed = 0;
-                        batchCount = 0;
-
-                        // Open the xel file for reading
-                        using (var events = new QueryableXEventData(xeFile.File.FullName))
-                        {
-                            // Open a new SQL Connection
-                            using (SqlConnection sqlConnection = GetConnection(xeFile.SqlConnectionStr))
-                            {
-                                // Setup the connection to the batches table
-                                sqlConnection.Open();
-                                SqlBulkCopy bcp = new SqlBulkCopy(sqlConnection);
-                                bcp.DestinationTableName = $"{xeFile.FullBatchesTableName}";
-
-                                // Process each event one by one
-                                foreach (var xe in events)
-                                {
-                                    eventsRead++;
-
-                                    // Only process rpc_completed and sql_batch_completed events
-                                    if ((xe.Name == "rpc_completed") || (xe.Name == "sql_batch_completed"))
-                                    {
-                                        // If user wants to filter out sp_reset_connection statements
-                                        if ((xeFile.FilterConnectionResets == false) || (xe.Name != "rpc_completed") || (xe.Fields["object_name"].Value.ToString() != "sp_reset_connection"))
-                                        {
-                                            // Only process events that have a Timestamp that fall within the StartTime and EndTime boundaries
-                                            if ((xe.Timestamp >= xeFile.StartTimeOffset) && (xe.Timestamp <= xeFile.EndTimeOffset))
-                                            {
-                                                try
-                                                {
-
-                                                    // Create a new row in the DataTable and populate
-                                                    row = dt.NewRow();
-                                                    dt.Rows.Add(row);
-                                                    row["EventSequence"] = xe.Actions["event_sequence"].Value;
-                                                    row["EventType"] = xe.Name;
-                                                    row["Timestamp"] = xe.Timestamp;
-                                                    row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
-                                                    row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
-                                                    row["DatabaseName"] = xe.Actions["database_name"].Value.ToString();
-                                                    row["NormTextHashId"] = 0;
-
-                                                    // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
-                                                    if (xe.Name == "rpc_completed")
-                                                    {
-                                                        objectNameStr = xe.Fields["object_name"].Value.ToString() ?? "";
-
-                                                        if ((!objectNameStr.StartsWith("sp_execute")) && (objectNameStr != "sp_prepare"))
-                                                        {
-                                                            textDataStr = objectNameStr;
-                                                        }
-                                                        else
-                                                        {
-                                                            textDataStr = xe.Fields["statement"].Value.ToString() ?? "";
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        textDataStr = xe.Fields["batch_text"].Value.ToString() ?? ""; ;
-                                                    }
-
-                                                    row["TextDataHashId"] = textDataStr.GetHashCode();
-                                                    row["TextData"] = textDataStr;
-
-                                                    normTextStr = GetNormText(textDataStr);
-                                                    databaseNormTextStr = string.Concat(databaseName, ", ", normTextStr);
-                                                    row["NormTextHashId"] = databaseNormTextStr.GetHashCode();
-                                                    row["NormText"] = normTextStr;
-
-                                                    if (xe.Fields["result"].Value.ToString() == "OK")
-                                                    {
-                                                        row["Successful"] = 1;
-                                                        row["Failed"] = 0;
-                                                        row["Aborted"] = 0;
-
-                                                    }
-                                                    else if (xe.Fields["result"].Value.ToString() == "Error")
-                                                    {
-                                                        row["Successful"] = 0;
-                                                        row["Failed"] = 1;
-                                                        row["Aborted"] = 0;
-
-                                                    }
-                                                    else if (xe.Fields["result"].Value.ToString() == "Abort")
-                                                    {
-                                                        row["Successful"] = 0;
-                                                        row["Failed"] = 0;
-                                                        row["Aborted"] = 1;
-
-                                                    }
-                                                    else
-                                                    {
-                                                        row["Successful"] = 0;
-                                                        row["Failed"] = 0;
-                                                        row["Aborted"] = 0;
-
-                                                    }
-                                                    row["Duration"] = xe.Fields["duration"].Value;
-                                                    row["CpuTime"] = xe.Fields["cpu_time"].Value;
-                                                    row["LogicalReads"] = xe.Fields["logical_reads"].Value;
-                                                    row["PhysicalReads"] = xe.Fields["physical_reads"].Value;
-                                                    row["Writes"] = xe.Fields["writes"].Value;
-                                                    row["Rowcount"] = xe.Fields["row_count"].Value;
-
-                                                    eventsProcessed++;
-
-                                                    // Flush the DataTable to the database in batches based on BatchSize parameter
-                                                    if ((eventsProcessed != 0) && (eventsProcessed % xeFile.BatchSize == 0))
-                                                    {
-                                                        bcp.WriteToServer(dt);
-                                                        dt.Rows.Clear();
-                                                        batchCount++;
-                                                    }
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Console.WriteLine($"Error message in File {xeFile.File.Name} - EventSequence {xe.Actions["event_sequence"].Value} - {ex.Message}");
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                // Flush the final DataTable to the database if not empty
-                                if (eventsProcessed != 0)
-                                {
-                                    bcp.WriteToServer(dt); // write last batch
-                                    dt.Rows.Clear();
-                                    batchCount++;
-                                }
-                            }
-                        }
-
-                        Console.WriteLine($"\r\nProcessed file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
-                        Console.WriteLine($"\tEvents read = {eventsRead.ToString()}");
-                        Console.WriteLine($"\tEvents processed = {eventsProcessed.ToString()}");
-                        Console.WriteLine($"\tBatches processed = {batchCount.ToString()}");
+                        ProcessSingleFile(xeFile);
                     }
                 }
             }
         }
+        static void ProcessSingleFile(XEFile xeFile)
+        {
+            Int64 eventsRead;
+            Int64 eventsProcessed;
+            Int32 batchCount;
 
+            // Create a DataTable to store the data that will be uploaded to the database
+            DataTable dt = CreateBatchesTable();
+
+            Console.WriteLine($"\r\nProcessing file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
+
+            eventsRead = 0;
+            eventsProcessed = 0;
+            batchCount = 0;
+
+            // Open the xel file for reading
+            using (var events = new QueryableXEventData(xeFile.File.FullName))
+            {
+                // Open a new SQL Connection
+                using (SqlConnection sqlConnection = GetConnection(xeFile.SqlConnectionStr))
+                {
+                    // Setup the connection to the batches table
+                    sqlConnection.Open();
+                    SqlBulkCopy bcp = new SqlBulkCopy(sqlConnection);
+                    bcp.DestinationTableName = $"{xeFile.FullBatchesTableName}";
+
+                    // Process each event one by one
+                    foreach (var xe in events)
+                    {
+                        eventsRead++;
+
+                        // Only process rpc_completed and sql_batch_completed events
+                        if ((xe.Name == "rpc_completed") || (xe.Name == "sql_batch_completed"))
+                        {
+                            // If user wants to filter out sp_reset_connection statements
+                            if ((xeFile.FilterConnectionResets == false) || (xe.Name != "rpc_completed") || (xe.Fields["object_name"].Value.ToString() != "sp_reset_connection"))
+                            {
+                                // Only process events that have a Timestamp that fall within the StartTime and EndTime boundaries
+                                if ((xe.Timestamp >= xeFile.StartTimeOffset) && (xe.Timestamp <= xeFile.EndTimeOffset))
+                                {
+                                    try
+                                    {
+
+                                        dt = ProcessSingleEvent(xe, dt, xeFile.CaptureSchemaName);
+                                        eventsProcessed++;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"Error message in File {xeFile.File.Name} - EventSequence {xe.Actions["event_sequence"].Value} - {ex.Message}");
+                                    }
+                            }
+                        }
+                        }
+
+                        // Flush the DataTable to the database in batches based on BatchSize parameter
+                        if ((eventsProcessed != 0) && (eventsProcessed % xeFile.BatchSize == 0))
+                        {
+                            bcp.WriteToServer(dt);
+                            dt.Rows.Clear();
+                            batchCount++;
+                        }
+                    }
+                    // Flush the final DataTable to the database if not empty
+                    if (eventsProcessed != 0)
+                    {
+                        bcp.WriteToServer(dt); // write last batch
+                        dt.Rows.Clear();
+                        batchCount++;
+                    }
+                }
+            }
+
+            Console.WriteLine($"\r\nProcessed file {xeFile.FileNumber.ToString()} - {xeFile.File.Name} at {DateTimeOffset.Now}!");
+            Console.WriteLine($"\tEvents read = {eventsRead.ToString()}");
+            Console.WriteLine($"\tEvents processed = {eventsProcessed.ToString()}");
+            Console.WriteLine($"\tBatches processed = {batchCount.ToString()}");
+        }
+        static DataTable ProcessSingleEvent(PublishedEvent xe, DataTable dt, bool captureSchemaName)
+        {
+            PublishedAction? username;
+            string? databaseName;
+            string objectName;
+            string textData;
+            string normText;
+            string databaseNormText;
+
+            DataRow row;
+
+            // Create a new row in the DataTable and populate
+            row = dt.NewRow();
+            dt.Rows.Add(row);
+            row["EventSequence"] = xe.Actions["event_sequence"].Value;
+            row["EventType"] = xe.Name;
+            row["Timestamp"] = xe.Timestamp;
+            row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
+            row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
+
+            xe.Actions.TryGetValue("username", out username);
+            if (username != null)
+            {
+                row["Username"] = username.Value.ToString();
+            }
+
+            databaseName = xe.Actions["database_name"].Value.ToString();
+            row["DatabaseName"] = databaseName;
+            row["NormTextHashId"] = 0;
+
+            // NormTextHashId, NormText, TextDataHashId and TextData are treated differently depending on whether the event is rpc_completed or sql_batch_completed
+            if (xe.Name == "rpc_completed")
+            {
+                objectName = xe.Fields["object_name"].Value.ToString() ?? "";
+                textData = xe.Fields["statement"].Value.ToString() ?? "";
+
+                if ((!objectName.StartsWith("sp_execute")) && (objectName != "sp_prepare"))
+                {
+                    if (captureSchemaName == true)
+                    {
+                        Int32 startIndex = textData.IndexOf(" ");
+                        bool foundObjectName = false;
+                        string fqObjectName = "";
+
+                        if (startIndex == -1)
+                        {
+                            normText = objectName;
+                        }
+                        else
+                        {
+                            Int32 endIndex = textData.IndexOf(" ", startIndex + 1);
+                            if (endIndex == -1)
+                            {
+                                normText = objectName;
+                            }
+                            else
+                            {
+                                while ((endIndex != -1) && (foundObjectName == false))
+                                {
+                                    if ((textData.IndexOf(objectName) > startIndex) && (textData.IndexOf(objectName) < endIndex))
+                                    {
+                                        fqObjectName = textData.Substring(startIndex, endIndex - startIndex).Trim();
+                                        foundObjectName = true;
+                                    }
+                                    else
+                                    {
+                                        startIndex = endIndex;
+                                        endIndex = textData.IndexOf(" ", startIndex + 1);
+                                    }
+                                }
+                                normText = fqObjectName;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        normText = objectName;
+                    }
+                }
+                else
+                {
+                    normText = GetNormText(textData);
+                }
+            }
+            else
+            {
+                textData = xe.Fields["batch_text"].Value.ToString() ?? "";
+                normText = GetNormText(textData);
+            }
+
+            row["TextDataHashId"] = textData.GetHashCode();
+            row["TextData"] = textData;
+
+            databaseNormText = string.Concat(databaseName, ", ", normText);
+            row["NormTextHashId"] = databaseNormText.GetHashCode();
+            row["NormText"] = normText;
+
+            if (xe.Fields["result"].Value.ToString() == "OK")
+            {
+                row["Successful"] = 1;
+                row["Failed"] = 0;
+                row["Aborted"] = 0;
+
+            }
+            else if (xe.Fields["result"].Value.ToString() == "Error")
+            {
+                row["Successful"] = 0;
+                row["Failed"] = 1;
+                row["Aborted"] = 0;
+
+            }
+            else if (xe.Fields["result"].Value.ToString() == "Abort")
+            {
+                row["Successful"] = 0;
+                row["Failed"] = 0;
+                row["Aborted"] = 1;
+
+            }
+            else
+            {
+                row["Successful"] = 0;
+                row["Failed"] = 0;
+                row["Aborted"] = 0;
+
+            }
+            row["Duration"] = xe.Fields["duration"].Value;
+            row["CpuTime"] = xe.Fields["cpu_time"].Value;
+            row["LogicalReads"] = xe.Fields["logical_reads"].Value;
+            row["PhysicalReads"] = xe.Fields["physical_reads"].Value;
+            row["Writes"] = xe.Fields["writes"].Value;
+            row["Rowcount"] = xe.Fields["row_count"].Value;
+
+            return dt;
+        }
+        private static DataTable CreateBatchesTable()
+        {
+            DataTable dt = new DataTable();
+            DataColumn eventSequence = new DataColumn("EventSequence", typeof(Int64));
+            dt.Columns.Add(eventSequence);
+            DataColumn eventType = new DataColumn("EventType", typeof(string));
+            eventType.MaxLength = 20;
+            dt.Columns.Add(eventType);
+            DataColumn timestamp = new DataColumn("Timestamp", typeof(DateTimeOffset));
+            dt.Columns.Add(timestamp);
+            DataColumn clientHostname = new DataColumn("ClientHostname", typeof(string));
+            clientHostname.MaxLength = 500;
+            dt.Columns.Add(clientHostname);
+            DataColumn clientAppName = new DataColumn("ClientAppName", typeof(string));
+            clientAppName.MaxLength = 1000;
+            dt.Columns.Add(clientAppName);
+            DataColumn username = new DataColumn("Username", typeof(string));
+            username.MaxLength = 200;
+            dt.Columns.Add(username);
+            DataColumn databaseName = new DataColumn("DatabaseName", typeof(string));
+            databaseName.MaxLength = 200;
+            dt.Columns.Add(databaseName);
+            DataColumn textDataHashId = new DataColumn("TextDataHashId", typeof(Int32));
+            dt.Columns.Add(textDataHashId);
+            DataColumn textData = new DataColumn("TextData", typeof(string));
+            textData.MaxLength = -1;
+            dt.Columns.Add(textData);
+            DataColumn normTextHashId = new DataColumn("NormTextHashId", typeof(Int32));
+            dt.Columns.Add(normTextHashId);
+            DataColumn normText = new DataColumn("NormText", typeof(string));
+            normText.MaxLength = -1;
+            dt.Columns.Add(normText);
+            DataColumn successful = new DataColumn("Successful", typeof(UInt16));
+            dt.Columns.Add(successful);
+            DataColumn failed = new DataColumn("Failed", typeof(UInt16));
+            dt.Columns.Add(failed);
+            DataColumn aborted = new DataColumn("Aborted", typeof(UInt16));
+            dt.Columns.Add(aborted);
+            DataColumn duration = new DataColumn("Duration", typeof(UInt64));
+            dt.Columns.Add(duration);
+            DataColumn cpuTime = new DataColumn("CpuTime", typeof(UInt64));
+            dt.Columns.Add(cpuTime);
+            DataColumn logicalReads = new DataColumn("LogicalReads", typeof(UInt64));
+            dt.Columns.Add(logicalReads);
+            DataColumn physicalReads = new DataColumn("PhysicalReads", typeof(UInt64));
+            dt.Columns.Add(physicalReads);
+            DataColumn writes = new DataColumn("Writes", typeof(UInt64));
+            dt.Columns.Add(writes);
+            DataColumn rowcount = new DataColumn("Rowcount", typeof(UInt64));
+            dt.Columns.Add(rowcount);
+
+            return dt;
+        }
         private static string GetNormText(string origText)
         {
             // Parses the TextData column and normalizes by removing literals and whitespace
@@ -785,6 +859,13 @@ namespace XELoader
             get
             {
                 return parallelThreads;
+            }
+        }
+        public bool CaptureSchemaName
+        {
+            get
+            {
+                return captureSchemaName;
             }
         }
     }
