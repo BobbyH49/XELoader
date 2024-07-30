@@ -30,6 +30,7 @@ ORDER BY
 -- Add the subset of NormText that you want to filter by
 SELECT
 	hr.DateTime
+	, ub.NormTextHashId
 	, ub.DatabaseName
 	, ub.NormText
 	, hr.ExecutionCount
@@ -49,7 +50,8 @@ ORDER BY DateTime ASC, hr.NormTextHashId ASC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinDuration
@@ -72,7 +74,8 @@ ORDER BY TotalDurationSeconds DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinCpuTime
@@ -95,7 +98,8 @@ ORDER BY TotalCpuTimeSeconds DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinLogicalReads
@@ -118,7 +122,8 @@ ORDER BY TotalLogicalReadsMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinPhysicalReads
@@ -141,7 +146,8 @@ ORDER BY TotalPhysicalReadsMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinWrites
@@ -164,7 +170,8 @@ ORDER BY TotalWritesMB DESC;
 
 -- Add the subset of NormText that you want to filter by
 SELECT
-	ub.DatabaseName
+	ub.NormTextHashId
+	, ub.DatabaseName
 	, ub.NormText
 	, bs.AllExecutions
 	, bss.MinRowcount

@@ -487,8 +487,8 @@ namespace XELoader
                             parsedText += "{STR}";
 
                         }
-                        // If the token is an integer
-                        else if (batch.TokenType.ToString().StartsWith("Integer"))
+                        // If the token is an integer or hex value
+                        else if ((batch.TokenType.ToString().StartsWith("Integer")) || (batch.TokenType.ToString().StartsWith("HexLiteral")))
                         {
                             // Replace with a static value
                             parsedText += "{##}";
