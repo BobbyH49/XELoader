@@ -1,5 +1,6 @@
 -- Provide the number of VCores for the server you are monitoring
 -- Find and Replace the word "Suffix" with your own suffix for the tables generated, including tblHourlyReport which will be created by this script
+-- Find and Replace the word "SchemaName" with your own schema name for the tables generated, including tblHourlyReport which will be created by this script
 
 DECLARE
 	@VCores INT = 20;
@@ -16,8 +17,8 @@ SELECT
 	, PhysicalReadsPages = SUM(PhysicalReads)
 	, WritesPages = SUM(Writes)
 	, AvgRowcount = AVG([Rowcount])
-INTO PeopleWeb.tblHourlyReportSuffix
-FROM PeopleWeb.tblBatchesSuffix
+INTO SchemaName.tblHourlyReportSuffix
+FROM SchemaName.tblBatchesSuffix
 GROUP BY
 	DATEADD(mi, DATEPART(mi, Timestamp), DATEADD(hh, DATEPART(hh, Timestamp), CAST(CAST(Timestamp AS DATE) AS DATETIME)))
 	, DatabaseName
@@ -41,8 +42,8 @@ SELECT
 	, hr.PhysicalReadsPages
 	, hr.WritesPages
 	, hr.AvgRowcount
-FROM PeopleWeb.tblHourlyReportSuffix hr
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub ON ub.NormTextHashId = hr.NormTextHashId
+FROM SchemaName.tblHourlyReportSuffix hr
+JOIN SchemaName.tblUniqueBatchesSuffix ub ON ub.NormTextHashId = hr.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -64,9 +65,9 @@ SELECT
 	, bss.Percentile90Duration
 	, bss.Percentile95Duration
 	, bss.Percentile99Duration
-FROM PeopleWeb.tblBatchDurationSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchDurationSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -88,9 +89,9 @@ SELECT
 	, bss.Percentile90CpuTime
 	, bss.Percentile95CpuTime
 	, bss.Percentile99CpuTime
-FROM PeopleWeb.tblBatchCpuTimeSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchCpuTimeSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -112,9 +113,9 @@ SELECT
 	, bss.Percentile90LogicalReads
 	, bss.Percentile95LogicalReads
 	, bss.Percentile99LogicalReads
-FROM PeopleWeb.tblBatchLogicalReadsSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchLogicalReadsSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -136,9 +137,9 @@ SELECT
 	, bss.Percentile90PhysicalReads
 	, bss.Percentile95PhysicalReads
 	, bss.Percentile99PhysicalReads
-FROM PeopleWeb.tblBatchPhysicalReadsSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchPhysicalReadsSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -160,9 +161,9 @@ SELECT
 	, bss.Percentile90Writes
 	, bss.Percentile95Writes
 	, bss.Percentile99Writes
-FROM PeopleWeb.tblBatchWritesSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchWritesSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
@@ -184,9 +185,9 @@ SELECT
 	, bss.Percentile90Rowcount
 	, bss.Percentile95Rowcount
 	, bss.Percentile99Rowcount
-FROM PeopleWeb.tblBatchRowcountSummarySuffix bss
-JOIN PeopleWeb.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
-JOIN PeopleWeb.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
+FROM SchemaName.tblBatchRowcountSummarySuffix bss
+JOIN SchemaName.tblBatchSummarySuffix bs on bs.NormTextHashId = bss.NormTextHashId
+JOIN SchemaName.tblUniqueBatchesSuffix ub on ub.NormTextHashId = bss.NormTextHashId
 --WHERE ub.NormText in (
 --	N''
 --)
