@@ -488,7 +488,7 @@ namespace XELoader
 
                         }
                         // If the token is an integer or hex value
-                        else if ((batch.TokenType.ToString().StartsWith("Integer")) || (batch.TokenType.ToString().StartsWith("HexLiteral")))
+                        else if ((batch.TokenType.ToString().StartsWith("Integer")) || (batch.TokenType.ToString() == ("HexLiteral")) || (batch.TokenType.ToString() == ("Numeric")))
                         {
                             // Replace with a static value
                             parsedText += "{##}";
@@ -514,6 +514,7 @@ namespace XELoader
                     }
                     // Replace any remaining whitespace
                     normText = Regex.Replace(parsedText, pattern, replacement).Trim();
+                    normText = normText.Replace("-{##}", "{##}");
                 }
             }
             catch (Exception ex)
