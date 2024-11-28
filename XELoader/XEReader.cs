@@ -281,6 +281,7 @@ namespace XELoader
             row["EventSequence"] = xe.Actions["event_sequence"].Value;
             row["EventType"] = xe.Name;
             row["Timestamp"] = xe.Timestamp;
+            row["ClientProcessId"] = xe.Actions["client_pid"].Value;
             row["ClientHostname"] = xe.Actions["client_hostname"].Value.ToString();
             row["ClientAppName"] = xe.Actions["client_app_name"].Value.ToString();
 
@@ -408,6 +409,8 @@ namespace XELoader
             dt.Columns.Add(eventType);
             DataColumn timestamp = new DataColumn("Timestamp", typeof(DateTimeOffset));
             dt.Columns.Add(timestamp);
+            DataColumn clientProcessId = new DataColumn("ClientProcessId", typeof(Int32));
+            dt.Columns.Add(clientProcessId);
             DataColumn clientHostname = new DataColumn("ClientHostname", typeof(string));
             clientHostname.MaxLength = 500;
             dt.Columns.Add(clientHostname);
